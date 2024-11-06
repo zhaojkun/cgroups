@@ -191,3 +191,42 @@ class Cgroup(object):
                 return value
         else:
             return None
+   
+    def set_cpuset(self, cpus, mems):
+        BASE_CGROUPS = '/sys/fs/cgroup'
+        user_cgroup_path = os.path.join(BASE_CGROUPS, "cpuset", self.user)
+        if os.path.exists(user_cgroup_path):
+            return None
+        self._copy_cpuset_if_need(user_cgroup_path,
+                                os.path.dirname(user_cgroup_path))
+        cgroup_path = os.path.join(user_cgroup_path, self.name)
+        if not os.path.exists(cgroup_path):
+            os.mkdir(cgroup_path)
+        if not self._is_empty(cpus):
+            self._write_cgroup_file(cgroup_path, "cpuset.cpus", cpus)
+        if not self.is_empty(mems):
+            self._write_cgroup_file(cgroup_path, "cpuset.mems", mems)
+        self._copy_cpuset_if_need(cgroup_path, user_cgroup_path)
+        self.cgroups["cpuset"] = cgroup_path
+
+        
+    def _copy_cpuset_if_need(self, curr, parent):
+        keys = ["cpuset.cpus", "cpuset.mems"]
+        for key in keys:
+            curr_val = self._read_cgroup_file(curr, key)
+            parent_val = self._read_cgroup_file(parent, key)
+            if self._is_empty(curr_val):
+                self._write_cgroup_file(curr, key, parent_val)
+
+    def _is_empty(self, v):
+        return v == None or v == "" or v == "\n"
+
+    def _read_cgroup_file(self, p, key):
+        full_path = os.path.join(p, key)
+        with open(full_path, 'r') as f:
+            return f.read()
+
+    def _write_cgroup_file(self, p, key, value):
+        full_path = os.path.join(p, key)
+        with open(full_path, 'w+') as f:
+            f.write('%s\n' % value.strip())
