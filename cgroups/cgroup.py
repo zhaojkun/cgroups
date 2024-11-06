@@ -193,7 +193,6 @@ class Cgroup(object):
             return None
    
     def set_cpuset(self, cpus, mems):
-        BASE_CGROUPS = '/sys/fs/cgroup'
         user_cgroup_path = os.path.join(BASE_CGROUPS, "cpuset", self.user)
         if not os.path.exists(user_cgroup_path):
             return None
